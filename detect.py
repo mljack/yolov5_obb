@@ -16,6 +16,8 @@ import argparse
 import os
 import sys
 from pathlib import Path
+import pprint
+import math
 
 import cv2
 import torch
@@ -35,6 +37,39 @@ from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import select_device, time_sync
 from utils.rboxs_utils import poly2rbox, rbox2poly
 
+import numpy as np
+
+def dist(p1, p2):
+    dx = p1[0] - p2[0]
+    dy = p1[1] - p2[1]
+    return math.sqrt(dx*dx+dy*dy)
+
+def compute_angle(p1, p2):
+    dx = p1[0] - p2[0]
+    dy = p1[1] - p2[1]
+    return math.degrees(math.atan2(dy, dx))
+
+def compute_center(poly):
+    return [(poly[0]+poly[2]+poly[4]+poly[6])/4.0, (poly[1]+poly[3]+poly[5]+poly[7])/4.0]
+
+def poly_to_obj_info(poly, score):
+    obj_info = {}
+    x0 = min(poly[0], poly[2], poly[4], poly[6])
+    x1 = max(poly[0], poly[2], poly[4], poly[6])
+    y0 = min(poly[1], poly[3], poly[5], poly[7])
+    y1 = max(poly[1], poly[3], poly[5], poly[7])
+    length = dist((poly[2], poly[3]), (poly[4], poly[5]))
+    width = dist((poly[0], poly[1]), (poly[2], poly[3]))
+    angle = compute_angle((poly[2], poly[3]), (poly[4], poly[5]))
+    obj_info["aabb"] = [[x0, y0], [x1, y1]]
+    obj_info["angle"] = angle
+    obj_info["center"] = compute_center(poly)
+    obj_info["width"] = width
+    obj_info["length"] = length
+    obj_info["polygon"] = poly
+    obj_info["score"] = score
+    obj_info["label"] = 1.0
+    return obj_info
 
 @torch.no_grad()
 def run(weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
@@ -45,6 +80,7 @@ def run(weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
         max_det=1000,  # maximum detections per image
         device='',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
         view_img=False,  # show results
+        save_json=False,  # save results to *.json
         save_txt=False,  # save results to *.txt
         save_conf=False,  # save confidences in --save-txt labels
         save_crop=False,  # save cropped prediction boxes
@@ -100,7 +136,7 @@ def run(weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
     # Run inference
     model.warmup(imgsz=(1, 3, *imgsz), half=half)  # warmup
     dt, seen = [0.0, 0.0, 0.0], 0
-    for path, im, im0s, vid_cap, s in dataset:
+    for path, im, im0s, vid_cap, s, scale_ratio in dataset:
         t1 = time_sync()
         im = torch.from_numpy(im).to(device)
         im = im.half() if half else im.float()  # uint8 to fp16/32
@@ -153,7 +189,30 @@ def run(weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
                 # Write results
+                vehicle_markers = []
+                obj_id = 0
                 for *poly, conf, cls in reversed(det):
+                    if save_json:
+                        poly = [float(v) for v in poly]
+                        obj_info = poly_to_obj_info(poly, float(conf))
+                        vehicle_marker = {}
+                        if obj_info["width"] > obj_info["length"]:
+                            vehicle_marker["heading_angle"] = 90 - obj_info["angle"]
+                            vehicle_marker["width"] = obj_info["length"] / scale_ratio
+                            vehicle_marker["length"] = obj_info["width"] / scale_ratio
+                        else:
+                            vehicle_marker["heading_angle"] = obj_info["angle"]
+                            vehicle_marker["width"] = obj_info["width"] / scale_ratio
+                            vehicle_marker["length"] = obj_info["length"] / scale_ratio
+                        vehicle_marker["frame_id"] = 0
+                        vehicle_marker["height"] = 30
+                        vehicle_marker["id"] = obj_id
+                        obj_id += 1
+                        vehicle_marker["score"] = obj_info["score"]
+                        vehicle_marker["x"] = obj_info["center"][0] / scale_ratio
+                        vehicle_marker["y"] = obj_info["center"][1] / scale_ratio
+                        vehicle_markers.append([vehicle_marker])
+
                     if save_txt:  # Write to file
                         # xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         poly = poly.tolist()
@@ -169,6 +228,10 @@ def run(weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
                         if save_crop: # Yolov5-obb doesn't support it yet
                             # save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
                             pass
+                if save_json:
+                    out_json_path = save_path.replace(".jpg", ".vehicle_markers.json")
+                    with open(out_json_path, 'a') as f:
+                        f.write(pprint.pformat(vehicle_markers, width=500, indent=1).replace("'", "\"").replace("True", "true").replace("False", "false"))
 
             # Print time (inference-only)
             LOGGER.info(f'{s}Done. ({t3 - t2:.3f}s)')
@@ -176,8 +239,10 @@ def run(weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
             # Stream results
             im0 = annotator.result()
             if view_img:
-                cv2.imshow(str(p), im0)
-                cv2.waitKey(1)  # 1 millisecond
+                cv2.imshow("Result", im0)
+                k = cv2.waitKey(1)  # 1 millisecond
+                if k == 27:
+                    exit(0)
 
             # Save results (image with detections)
             if save_img:
@@ -201,8 +266,8 @@ def run(weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
     # Print results
     t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
     LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *imgsz)}' % t)
-    if save_txt or save_img:
-        s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
+    if save_txt or save_json or save_img:
+        s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt or save_json else ''
         LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
     if update:
         strip_optimizer(weights)  # update model (to fix SourceChangeWarning)
@@ -218,6 +283,7 @@ def parse_opt():
     parser.add_argument('--max-det', type=int, default=1000, help='maximum detections per image')
     parser.add_argument('--device', default='3', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--view-img', action='store_true', help='show results')
+    parser.add_argument('--save-json', action='store_true', help='save results to *.json')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
     parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
     parser.add_argument('--save-crop', action='store_true', help='save cropped prediction boxes')

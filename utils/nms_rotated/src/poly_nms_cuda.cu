@@ -24,7 +24,7 @@ int const threadsPerBlock = sizeof(unsigned long long) * 8;
 const double eps=1E-8;
 
 __device__ inline int sig(float d){
-    return(d>eps)-(d<-eps);
+    return(d>1E-8)-(d<-1E-8);
 }
 
 __device__ inline int point_eq(const float2 a, const float2 b) {

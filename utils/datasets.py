@@ -994,7 +994,7 @@ def verify_image_label(args):
             nl = len(l)
             if nl:
                 assert len(label) == 10, f'Yolov5-OBB labels require 10 columns, which same as DOTA Dataset, {len(label)} columns detected'
-                assert (l >= 0).all(), f'negative label values {l[l < 0]}, please check your dota format labels'
+                #assert (l >= 0).all(), f'negative label values {l[l < 0]}, please check your dota format labels'
                 #assert (l[:, 1:] <= 1).all(), f'non-normalized or out of bounds coordinates {l[:, 1:][l[:, 1:] > 1]}'
                 _, i = np.unique(l, axis=0, return_index=True)
                 if len(i) < nl:  # duplicate row check
@@ -1012,6 +1012,10 @@ def verify_image_label(args):
             l = np.zeros((0, 9), dtype=np.float32)
         return im_file, l, shape, segments, nm, nf, ne, nc, msg
     except Exception as e:
+        # import traceback
+        # traceback.print_exc()
+        # print(label)
+        # print(l)
         nc = 1
         msg = f'{prefix}WARNING: {im_file}: ignoring corrupt image/label: {e}'
         return [None, None, None, None, nm, nf, ne, nc, msg]

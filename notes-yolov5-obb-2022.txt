@@ -1,0 +1,40 @@
+https://github.com/mljack/yolov5_obb/blob/master/docs/install.md
+
+conda create -n yolov5_obb python=3.9 -y 
+source activate yolov5_obb
+pip3 install torch==1.10.1+cu113 torchvision==0.11.2+cu113 torchaudio==0.10.1+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
+
+cd yolov5_obb
+pip install -r requirements.txt
+cd utils/nms_rotated
+pip install -v -e .
+
+cd yolov5_obb/DOTA_devkit
+sudo apt-get install swig
+swig -c++ -python polyiou.i
+python setup.py build_ext --inplace
+
+python convert_to_yolo_poly_dataset.py
+
+python -u train.py --save-period 1 --weight "runs/yolov5m_finetune/weights/best.pt" --data "data/eagle003.yaml" --hyp "data/hyps/obb/hyp.finetune_eagle003.yaml" --img-size 768 --batch-size 32 --epochs 80 --device 0 2>&1 | tee 20221016_0325.log
+
+val: WARNING: data/eagle/0011_private170/images/yanggaobeilu_20210327_134654_a_01.jpg: ignoring corrupt image/label: negative label values [     -21.75      -48.03       -3.98], please check your dota format labels
+
+heading angles sometimes are incorrect...
+    due to augmentation?
+        or incorrect label converter?
+            inverted y...
+
+yolov5_obb/utils/datasets.py
+    def verify_image_label(args):
+                #assert (l >= 0).all(), f'negative label values {l[l < 0]}, please check your dota format labels'
+                    comment the negative coodinates checking
+
+exp        train           val                 hyp             epochs      mAP
+exp4       eagle           private170          DroneVehicle    100
+exp5       eagle           private170          DOTA            100
+exp6       eagle+longyao   private170          DOTA            100
+exp7       eagle+longyao   eagle+longyao       DOTA            100
+exp8       eagle+longyao   eagle+longyao       DroneVehicle    100
+
+

@@ -1,0 +1,36 @@
+# train and val data as 1) directory: path/images/, 2) file: path/images.txt, or 3) list: [path1/images/, path2/images/]
+train: [
+  'data/eagle/0014_longyaolu_c1000e/train/images/',
+  'data/eagle/0013_longyaolu_dji/train/images/',
+
+  'data/eagle/0001_shijidadao_20200907_1202_200m_fixed/train/images/',
+  'data/eagle/0002_tongji_011/train/images/',
+  'data/eagle/0003_changtai_20200903_1205_250m_fixed/train/images/',
+  'data/eagle/0004_jinqiao_20200907_1104_200m_fixed/train/images/',
+  'data/eagle/0005_ysq1/train/images/',
+  'data/eagle/0006_syq4/train/images/',
+  'data/eagle/0007_gm7/train/images/',
+  'data/eagle/0012_web-collection-003_dataset/train/images/'
+]
+
+val: [
+  'data/eagle/0014_longyaolu_c1000e/val/images/',
+  'data/eagle/0013_longyaolu_dji/val/images/',
+
+  'data/eagle/0001_shijidadao_20200907_1202_200m_fixed/val/images/',
+  'data/eagle/0002_tongji_011/val/images/',
+  'data/eagle/0003_changtai_20200903_1205_250m_fixed/val/images/',
+  'data/eagle/0004_jinqiao_20200907_1104_200m_fixed/val/images/',
+  'data/eagle/0005_ysq1/val/images/',
+  'data/eagle/0006_syq4/val/images/',
+  'data/eagle/0007_gm7/val/images/',
+  'data/eagle/0012_web-collection-003_dataset/val/images/'
+]
+
+# val: [
+#   'data/eagle/0011_private170/images/'
+# ]
+
+# Classes
+nc: 2  # number of classes
+names: ['vehicle', 'None']  # class names

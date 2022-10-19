@@ -39,6 +39,7 @@ def parse_gt(filename):
                     object_struct['difficult'] = 0
                 elif (len(splitlines) == 10):
                     object_struct['difficult'] = int(splitlines[9])
+                object_struct['difficult'] = 0
                 object_struct['bbox'] = [float(splitlines[0]),
                                          float(splitlines[1]),
                                          float(splitlines[2]),
@@ -232,11 +233,10 @@ def voc_eval(detpath,
 
     # compute precision recall
 
-    print('check fp:', fp)
-    print('check tp', tp)
+    #print('check fp:', fp)
+    #print('check tp', tp)
 
-
-    print('npos num:', npos)
+    #print('npos num:', npos)
     fp = np.cumsum(fp)
     tp = np.cumsum(tp)
 
@@ -302,45 +302,53 @@ def main():
     # For DOTA-v1.0
     # classnames = ['plane', 'baseball-diamond', 'bridge', 'ground-track-field', 'small-vehicle', 'large-vehicle', 'ship', 'tennis-court',
     #             'basketball-court', 'storage-tank',  'soccer-ball-field', 'roundabout', 'harbor', 'swimming-pool', 'helicopter']
-    classaps = []
-    map = 0
-    skippedClassCount = 0
-    for classname in classnames:
-        print('classname:', classname)
-        detfile = detpath.format(classname)
-        if not (os.path.exists(detfile)):
-            skippedClassCount += 1
-            print('This class is not be detected in your dataset: {:s}'.format(classname))
-            continue
-        rec, prec, ap = voc_eval(detpath,
-             annopath,
-             imagesetfile,
-             classname,
-             ovthresh=0.5,
-             use_07_metric=True)
-        map = map + ap
-        #print('rec: ', rec, 'prec: ', prec, 'ap: ', ap)
-        print('ap: ', ap)
-        classaps.append(ap)
 
-        # # umcomment to show p-r curve of each category
-        # plt.figure(figsize=(8,4))
-        # plt.xlabel('Recall')
-        # plt.ylabel('Precision')
-        # plt.xticks(fontsize=11)
-        # plt.yticks(fontsize=11)
-        # plt.xlim(0, 1)
-        # plt.ylim(0, 1)
-        # ax = plt.gca()
-        # ax.spines['top'].set_color('none')
-        # ax.spines['right'].set_color('none')
-        # plt.plot(rec, prec)
-        # # plt.show()
-        # plt.savefig('pr_curve/{}.png'.format(classname))
-    map = map/(len(classnames)-skippedClassCount)
-    print('map:', map)
-    classaps = 100*np.array(classaps)
-    print('classaps: ', classaps)
+    mAPs = []
+    for iou in np.arange(0.5, 1.0, 0.05):
+        classaps = []
+        map = 0
+        skippedClassCount = 0
+        for classname in classnames:
+            #print('classname:', classname)
+            detfile = detpath.format(classname)
+            if not (os.path.exists(detfile)):
+                skippedClassCount += 1
+                print('This class is not be detected in your dataset: {:s}'.format(classname))
+                continue
+            rec, prec, ap = voc_eval(detpath,
+                annopath,
+                imagesetfile,
+                classname,
+                ovthresh=iou,
+                use_07_metric=True)
+            map = map + ap
+            #print('rec: ', rec, 'prec: ', prec, 'ap: ', ap)
+            #print('ap: ', ap)
+            classaps.append(ap)
+
+            # # umcomment to show p-r curve of each category
+            # plt.figure(figsize=(8,4))
+            # plt.xlabel('Recall')
+            # plt.ylabel('Precision')
+            # plt.xticks(fontsize=11)
+            # plt.yticks(fontsize=11)
+            # plt.xlim(0, 1)
+            # plt.ylim(0, 1)
+            # ax = plt.gca()
+            # ax.spines['top'].set_color('none')
+            # ax.spines['right'].set_color('none')
+            # plt.plot(rec, prec)
+            # # plt.show()
+            # plt.savefig('pr_curve/{}.png'.format(classname))
+        map = map/(len(classnames)-skippedClassCount)
+        #print('map:', map)
+        classaps = 100*np.array(classaps)
+        #print('classaps: ', classaps)
+        mAP = np.mean(classaps)
+        mAPs.append(mAP)
+        print('mAP@IoU%.2f: %.2f%%' % (iou, mAP))
+    print('mmAP:%.2f%%' % np.mean(mAPs))
+
 if __name__ == '__main__':
     main()
     # image2txt('/media/test/4d846cae-2315-4928-8d1b-ca6d3a61a3c6/DroneVehicle/val/raw/images', 

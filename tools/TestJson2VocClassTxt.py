@@ -25,8 +25,10 @@ dotav15_classnames = ['plane', 'baseball-diamond', 'bridge', 'ground-track-field
 # For DOTA-v1.0
 datav1_classnames = ['plane', 'baseball-diamond', 'bridge', 'ground-track-field', 'small-vehicle', 'large-vehicle', 'ship', 'tennis-court',
             'basketball-court', 'storage-tank',  'soccer-ball-field', 'roundabout', 'harbor', 'swimming-pool', 'helicopter']
+# For DroneVehicle
+vehicle_classnames = ['vehicle', 'None']
 
-DOTA_CLASSES = dotav15_classnames
+DOTA_CLASSES = vehicle_classnames
 if __name__ == '__main__':
     json_file =  arg.json_path # COCO Object Instance 类型的标注
     ana_txt_save_path = arg.save_path  # 保存的路径

@@ -58,6 +58,7 @@ def voc_ap(rec, prec, use_07_metric=False):
     If use_07_metric is true, uses the
     VOC 07 11 point method (default:False).
     """
+    #use_07_metric = False
     if use_07_metric:
         # 11 point metric
         ap = 0.
@@ -66,6 +67,7 @@ def voc_ap(rec, prec, use_07_metric=False):
                 p = 0
             else:
                 p = np.max(prec[rec >= t])
+            print(f"{t:.1f}, {p:.4f}")
             ap = ap + p / 11.
     else:
         # correct AP calculation
@@ -281,6 +283,7 @@ def parse_args():
     parser.add_argument('--detpath', default='runs/val/yolov5t_DroneVehicle_val/splited_obb_prediction_Txt/Task1_{:s}.txt', help='test config file path')
     parser.add_argument('--annopath', default='/media/test/4d846cae-2315-4928-8d1b-ca6d3a61a3c6/DroneVehicle/val/raw/labelTxt/{:s}.txt', help='checkpoint file')
     parser.add_argument('--imagesetfile', default='/media/test/4d846cae-2315-4928-8d1b-ca6d3a61a3c6/DroneVehicle/val/raw/imgnamefile.txt', help='checkpoint file')
+    parser.add_argument('--model_id', default='')
     args = parser.parse_args()
     return args
 
@@ -290,6 +293,7 @@ def main():
     detpath = args.detpath
     annopath = args.annopath
     imagesetfile = args.imagesetfile
+    model_id = args.model_id
     # For DroneVehicle
     classnames=['vehicle']
     # For DOTA-v2.0
@@ -320,11 +324,14 @@ def main():
                 imagesetfile,
                 classname,
                 ovthresh=iou,
-                use_07_metric=True)
+                use_07_metric=False)
             map = map + ap
-            #print('rec: ', rec, 'prec: ', prec, 'ap: ', ap)
-            #print('ap: ', ap)
             classaps.append(ap)
+
+            #print('rec: ', rec, 'prec: ', prec, 'ap: ', ap)
+            # for idx,r in enumerate(rec):
+            #     print('recall: ', r, 'precsion: ', prec[idx])
+            # print('ap: ', ap)
 
             # # umcomment to show p-r curve of each category
             # plt.figure(figsize=(8,4))
@@ -339,15 +346,26 @@ def main():
             # ax.spines['right'].set_color('none')
             # plt.plot(rec, prec)
             # # plt.show()
-            # plt.savefig('pr_curve/{}.png'.format(classname))
+            # plt.savefig('pr_curve_{}.png'.format(classname))
+            #exit(0)
+
         map = map/(len(classnames)-skippedClassCount)
         #print('map:', map)
         classaps = 100*np.array(classaps)
         #print('classaps: ', classaps)
         mAP = np.mean(classaps)
         mAPs.append(mAP)
-        print('mAP@IoU%.2f: %.2f%%' % (iou, mAP))
-    print('mmAP:%.2f%%' % np.mean(mAPs))
+        #print('mAP@IoU%.2f: %6.2f%%,  precision: %.2f%%, recall: %.2f%%' % (iou, mAP, float(prec[0])*100, float(rec[0])*100))
+        #print('mAP@IoU%.2f: %6.2f%%' % (iou, mAP))
+    mAPs.append(np.mean(mAPs))
+    #print('mmAP:%.2f%%' % np.mean(mAPs))
+    # print(mAPs)
+    print("+-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+")
+    print("|                 |   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |")
+    print("+-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+")
+    print(f"| {model_id:15s} | %5.2f%% | %5.2f%% | %5.2f%% | %5.2f%% | %5.2f%% | %5.2f%% | %5.2f%% | %5.2f%% | %5.2f%% | %5.2f%% | %5.2f%% |" % tuple(mAPs))
+    print("+-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+")
+    print("mAP: %5.2f%%" % (mAPs[-1]))
 
 if __name__ == '__main__':
     main()

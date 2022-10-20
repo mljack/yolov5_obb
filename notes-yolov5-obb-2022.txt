@@ -37,7 +37,34 @@ exp4       eagle           private170          DroneVehicle    17/23        84.8
 exp5       eagle           private170          DOTA            17/19        85.308%     85.8%
 exp6       eagle+longyao   private170          DOTA            13/23        85.701%     86.1%
 exp7       eagle+longyao   eagle+longyao       DOTA            99/99        92.760%     86.2%@epoch99 86.3%epoch75 86.4%@epoch50 86.0%@epoch25 85.8%@epoch10
-exp8       eagle+longyao   eagle+longyao       DroneVehicle    33/interrupted 88.272%                              86.1%@epoch32 85.8%@epoch25 85.1%@epoch10
+exp8       eagle+longyao   eagle+longyao       DroneVehicle    32/interrupted 88.272%                              86.1%@epoch32 85.8%@epoch25 85.1%@epoch10
+
+model        cropped_HBBmAP     cropped_OBBmAP(nms_iou=0.9)	OBBmAP(nms_iou=0.4)
+exp5_epoch18          0.853             84.52%
+exp7_epoch50          0.864             85.40%			81.85% ???
+exp8_epoch32          0.861             84.77%
+
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+|                 |   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| exp5_epoch18    | 99.60% | 99.56% | 99.51% | 99.42% | 99.33% | 98.98% | 97.97% | 91.99% | 56.77% |  2.07% | 84.52% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| exp7_epoch50    | 99.58% | 99.58% | 99.53% | 99.49% | 99.40% | 99.05% | 98.39% | 92.67% | 63.00% |  3.30% | 85.40% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| exp8_epoch32    | 99.50% | 99.47% | 99.44% | 99.36% | 99.24% | 98.92% | 98.12% | 92.14% | 58.95% |  2.62% | 84.77% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+
+(yolov5_obb) me@node2:~/2TSSD/ws/yolov5_obb$
+python detect.py --img-size 4000 6016 --view-img --device=0 --weights runs/train/exp7/weights/epoch50.pt --save-json --source private170
+    large --img-size
+        sliced or resized in yolov5 6.0 inference?
+
+
+
+
+
+
+
 
 measurement of best model
     fitness = 0.1*{mAP@0.5} + 0.9*{mAP@0.5:0.95}
@@ -53,16 +80,16 @@ python val.py --batch-size 32 --imgsz 768 --device=0 --data "data/eagle003.yaml"
 python val.py --batch-size 32 --imgsz 768 --device=0 --data "data/eagle003.yaml" --weights runs/train/exp7/weights/epoch99.pt
 
 evaluate OBB mAP with yolov5_obb/val.py
-    python val.py --batch-size 32 --imgsz 768 --device=0 --data "data/eagle003.yaml" --weights runs/train/exp7/weights/epoch50.pt --save-json
-    runs/val/exp29/epoch50_obb_predictions.json
+    python val.py --batch-size 32 --imgsz 768 --device=0 --data "data/eagle003.yaml" --weights runs/train/exp7/weights/epoch50.pt --save-json --exist-ok --name exp29 --iou-thres 0.6 --conf-thres=0.01
+        runs/val/exp29/epoch50_obb_predictions.json
     python tools/TestJson2VocClassTxt.py --json_path runs/val/exp29/epoch50_obb_predictions.json --save_path runs/val/exp29/epoch50_obb_det
-    rename Task1_plane.txt to Task1_vehicle.txt
     ls data/eagle/0011_private170/labelTxt | sed 's/\.txt//g' > data/eagle/0011_private170/list.txt
     python DOTA_devkit/dota_evaluation_task1.py --detpath 'runs/val/exp29/epoch50_obb_det/Task1_{:s}.txt' --annopath 'data/eagle/0011_private170/labelTxt/{:s}.txt' --imagesetfile data/eagle/0011_private170/list.txt
         no luck yet...
             it's due to DOTA_devkit skip labels with difficult==1, and somehow all my gt label difficult==1
                 set all difficult==0 and it works!
-    (yolov5_obb) me@node2:~/2TSSD/ws/yolov5_obb$ python DOTA_devkit/dota_evaluation_task1.py --detpath 'runs/val/exp29/epoch50_obb_det/Task1_{:s}.txt' --annopath 'data/eagle/0011_private170/labelTxt/{:s}.txt' --imagesetfile data/eagle/0011_private170/list.txt
+    (yolov5_obb) me@node2:~/2TSSD/ws/yolov5_obb$
+    python DOTA_devkit/dota_evaluation_task1.py --detpath 'runs/val/exp29/epoch50_obb_det/Task1_{:s}.txt' --annopath 'data/eagle/0011_private170/labelTxt/{:s}.txt' --imagesetfile data/eagle/0011_private170/list.txt
     mAP@IoU0.50: 90.91%
     mAP@IoU0.55: 90.91%
     mAP@IoU0.60: 90.91%
@@ -77,6 +104,219 @@ evaluate OBB mAP with yolov5_obb/val.py
         low on low IoU ?
         high on high IoU ?
         mAP50 < 99% => recall issue
+        Object-Detection-Metrics use every point to calculate mAP,
+            while DOTA_devkit/dota_evaluation_task1.py use 11-point interpolation by default.
+
+            Our default implementation is the same as VOC PASCAL: every point interpolation. If you want to use the 11-point interpolation,
+            change the functions that use the argument ```method=MethodAveragePrecision.EveryPointInterpolation``` to
+            ```method=MethodAveragePrecision.ElevenPointInterpolation```.
+            
+            def voc_ap(rec, prec, use_07_metric=False):
+                """ ap = voc_ap(rec, prec, [use_07_metric])
+                Compute VOC AP given precision and recall.
+                If use_07_metric is true, uses the
+                VOC 07 11 point method (default:False).
+
+            re-read definition of 11-point interpolation mAP
+                if detection cannot get recall 100% on any confidence threshold, the 11-point interpolated mAP <= 10/11 (90.90909%)
+                    so researchers switch to Pascal VOC 2012 metric, instead of using 2007 metric when mAP > 90%
+
+https://jonathan-hui.medium.com/map-mean-average-precision-for-object-detection-45c121a31173
+	According to the original researcher, the intention of using 11 interpolated point in calculating AP is
+		The intention in interpolating the precision/recall curve in this way is to reduce the impact of
+		the “wiggles” in the precision/recall curve, caused by small variations in the ranking of examples.
+	However, this interpolated method is an approximation which suffers two issues. It is less precise. Second,
+		it lost the capability in measuring the difference for methods with low AP. Therefore, a different AP
+			calculation is adopted after 2008 for PASCAL VOC.
+	For later Pascal VOC competitions, VOC2010–2012 samples the curve at all unique recall values (r₁, r₂, …),
+		whenever the maximum precision value drops. With this change, we are measuring the exact area under
+			the precision-recall curve after the zigzags are removed.
+				No approximation or interpolation is needed. Instead of sampling 11 points, we sample p(rᵢ)
+					whenever it drops and computes AP as the sum of the rectangular blocks.
+						This definition is called the Area Under Curve (AUC). As shown below, as the
+							interpolated points do not cover where the precision drops, both methods will diverge.
+	COCO mAP
+		Latest research papers tend to give results for the COCO dataset only.
+			101-point interpolated AP definition is used in the calculation
+		under the COCO context, there is no difference between AP and mAP.
+			AP is averaged over all categories. Traditionally, this is called “mean average precision” (mAP).
+			We make no distinction between AP and mAP (and likewise AR and mAR) and assume the difference is clear from context.
+
+
+https://github.com/rafaelpadilla/Object-Detection-Metrics
+https://github.com/rafaelpadilla/review_object_detection_metrics
+	updated with all COCO metrics, new formats and a GUI
+
+
+
+    with use_07_metric=False
+    mAP@IoU0.50:  99.57%
+    mAP@IoU0.55:  99.57%
+    mAP@IoU0.60:  99.47%
+    mAP@IoU0.65:  99.37%
+    mAP@IoU0.70:  99.05%
+    mAP@IoU0.75:  98.52%
+    mAP@IoU0.80:  97.49%
+    mAP@IoU0.85:  90.55%
+    mAP@IoU0.90:  60.24%
+    mAP@IoU0.95:   3.22%
+    mmAP:84.71% on sliced private170 (model exp7 epoch50 HBBmAP 86.4%)
+
+    test on different nms iou threshold:
+
+    --iou-thres 0.6 --conf-thres=0.01
+    mAP@IoU0.50:  99.67%
+    mAP@IoU0.55:  99.67%
+    mAP@IoU0.60:  99.57%
+    mAP@IoU0.65:  99.50%
+    mAP@IoU0.70:  99.24%
+    mAP@IoU0.75:  98.74%
+    mAP@IoU0.80:  97.65%
+    mAP@IoU0.85:  90.67%
+    mAP@IoU0.90:  60.26%
+    mAP@IoU0.95:   3.23%
+    mmAP:84.82%
+
+(yolov5_obb) me@node2:~/2TSSD/ws/yolov5_obb$
+python val.py --batch-size 32 --imgsz 768 --device=0 --data "data/eagle003.yaml" --weights runs/train/exp7/weights/epoch50.pt --save-json --exist-ok --name exp29 --conf-thres 0.01 --iou-thres 0.x
+OBB mAP (yolov5 6.0 obb: exp7/weights/epoch50.pt)
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+|  exp7_epoch50   |   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.01    | 99.54% | 99.54% | 99.44% | 99.34% | 99.02% | 98.52% | 97.49% | 90.55% | 60.24% |  3.22% | 84.69% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.1     | 99.54% | 99.54% | 99.44% | 99.34% | 99.02% | 98.52% | 97.49% | 90.55% | 60.24% |  3.22% | 84.69% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.2     | 99.54% | 99.54% | 99.44% | 99.34% | 99.02% | 98.52% | 97.49% | 90.55% | 60.24% |  3.22% | 84.69% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.3     | 99.54% | 99.54% | 99.44% | 99.34% | 99.02% | 98.52% | 97.49% | 90.55% | 60.24% |  3.22% | 84.69% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.4     | 99.57% | 99.57% | 99.47% | 99.37% | 99.05% | 98.52% | 97.49% | 90.55% | 60.24% |  3.22% | 84.71% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.5     | 99.57% | 99.57% | 99.51% | 99.40% | 99.08% | 98.58% | 97.52% | 90.58% | 60.24% |  3.22% | 84.73% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.6     | 99.67% | 99.67% | 99.57% | 99.50% | 99.24% | 98.74% | 97.65% | 90.67% | 60.26% |  3.23% | 84.82% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.7     | 99.70% | 99.70% | 99.63% | 99.59% | 99.40% | 98.92% | 97.86% | 90.73% | 60.30% |  3.22% | 84.91% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.8     | 99.66% | 99.66% | 99.61% | 99.58% | 99.45% | 99.07% | 98.23% | 91.38% | 60.47% |  3.23% | 85.03% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.9     | 99.58% | 99.58% | 99.53% | 99.49% | 99.40% | 99.05% | 98.39% | 92.67% | 63.00% |  3.30% | 85.40% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.91    | 99.55% | 99.55% | 99.49% | 99.46% | 99.35% | 99.03% | 98.33% | 92.85% | 63.36% |  3.37% | 85.43% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.92    | 99.49% | 99.49% | 99.43% | 99.40% | 99.29% | 98.95% | 98.30% | 92.80% | 63.95% |  3.46% | 85.46% |  BEST
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.93    | 99.35% | 99.35% | 99.29% | 99.25% | 99.16% | 98.84% | 98.14% | 92.69% | 64.09% |  3.50% | 85.37% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.94    | 99.03% | 99.03% | 98.97% | 98.93% | 98.84% | 98.55% | 97.81% | 92.62% | 64.41% |  3.60% | 85.18% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.95    | 98.45% | 98.45% | 98.40% | 98.36% | 98.26% | 97.97% | 97.29% | 92.24% | 64.43% |  3.78% | 84.76% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.96    | 95.70% | 95.70% | 95.65% | 95.62% | 95.52% | 95.27% | 94.68% | 90.07% | 63.47% |  4.09% | 82.58% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.97    | 83.59% | 83.59% | 83.56% | 83.54% | 83.47% | 83.30% | 82.87% | 79.26% | 57.65% |  4.25% | 72.51% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.98    | 62.96% | 62.96% | 62.95% | 62.93% | 62.89% | 62.79% | 62.52% | 60.14% | 45.22% |  3.80% | 54.92% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| nms_iou_0.99    | 43.30% | 43.30% | 43.29% | 43.28% | 43.26% | 43.21% | 43.08% | 41.68% | 32.16% |  3.25% | 37.98% |
++-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+
+python pascalvoc.py -gt F:\ws\efficientdet_pytorch_win64\_datasets\_test_sets\private170 -det F:\yolov5_6.0_exp7_epoch50_obb -detformat obb_json -gtformat obb_json
+人工检查结果
+	big_truck漏检极少，框不像efficientdet偏离车整体很多或仅包含一半车体
+	但两俩小车隔一个车道并排时，常在中间多产生一个误检目标，长度类似big_truck
+	整体OBB紧实程度不如efficientdet
+	yolov5_6_obb 在不同车辆类型上的检测质量更均衡，宽度偏差上也没有明显偏宽，而是有宽有窄
+		所以统一缩小宽度不起作用
+
+compare with efficientdet_073 for multi-classes APs
+					multi-classes mAP@0.5-0.95	single-classes mAP@0.5-0.95
+yolov5_6_exp7_epoch50			80.78%				81.85%
+yolov5_6_exp7_epoch50(w*=0.98)		80.23%				81.56%
+yolov5_6_exp7_epoch50(w*=1.02)		80.57%				81.49%
+model-073-036epoch			76.94%				81.89%
+model-073-036epoch (w*=0.938 if ratio<3)78.28%				
+model-073-036epoch (w*=0.938 if ratio>3)78.76%				
+model-073-036epoch (w*=0.938 if ratio<4)79.64%
+model-073-036epoch (w*=0.938 if ratio<5)80.17%
+model-073-036epoch (w*=0.938 if ratio<6)80.19%				84.47%
+model-073-036epoch (w*=0.938 if ratio<7)80.14%
+model-073-036epoch (w*=0.938 if ratio<8)80.14%
+model-073-036epoch (w*=0.938 if ratio<9)80.14%
+model-073-036epoch (w*=0.938)		80.14%				84.46%
+				
+
+todo: more detail check
+	w *= 0.923 trick doesn't work on yolov5_6.0_obb trained on dataset@2021
+	OBBmAP results don't match between Object-Detection-Metrics and yolov5_dot_evaluate_task1
+		check more details
+
+                 AP    TP    FP    GT
+       car:  99.69%  2547    16  2555
+       bus: 100.00%    69     0    69
+ big_truck:  98.27%   170     0   173
+     truck: 100.00%   132     1   132
+========================================    50%
+       car:  99.69%  2547    16  2555
+       bus: 100.00%    69     0    69
+ big_truck:  98.27%   170     0   173
+     truck: 100.00%   132     1   132
+========================================    55%
+       car:  99.69%  2547    16  2555
+       bus: 100.00%    69     0    69
+ big_truck:  98.27%   170     0   173
+     truck: 100.00%   132     1   132
+========================================    60%
+       car:  99.65%  2546    17  2555
+       bus: 100.00%    69     0    69
+ big_truck:  97.68%   169     1   173
+     truck: 100.00%   132     1   132
+========================================    65%
+       car:  99.61%  2545    18  2555
+       bus: 100.00%    69     0    69
+ big_truck:  97.02%   168     2   173
+     truck: 100.00%   132     1   132
+========================================    70%
+       car:  99.47%  2542    21  2555
+       bus: 100.00%    69     0    69
+ big_truck:  93.55%   163     7   173
+     truck: 100.00%   132     1   132
+========================================    75%
+       car:  98.55%  2523    40  2555
+       bus: 100.00%    69     0    69
+ big_truck:  85.73%   154    16   173
+     truck:  98.96%   131     2   132
+========================================    80%
+       car:  87.50%  2329   234  2555
+       bus:  78.18%    60     9    69
+ big_truck:  75.57%   140    30   173
+     truck:  86.67%   119    14   132
+========================================    85%
+       car:  37.64%  1427  1136  2555
+       bus:  39.76%    41    28    69
+ big_truck:  24.36%    71    99   173
+     truck:  34.07%    68    65   132
+========================================    90%
+       car:   0.49%   125  2438  2555
+       bus:   0.57%     4    65    69
+ big_truck:   1.09%    10   160   173
+     truck:   1.19%    10   123   132
+========================================    95%
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:|   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:| 99.49% | 99.49% | 99.49% | 99.33% | 99.16% | 98.25% | 95.81% | 81.98% | 33.96% |  0.83% | 80.78% |	multi-classes mAP@0.5-0.95
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+SUMMARY:80.78
+
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:|   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:| 99.62% | 99.62% | 99.62% | 99.56% | 99.48% | 99.19% | 97.96% | 86.46% | 36.49% |  0.48% | 81.85% |	single-class AP@0.5-0.95
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+SUMMARY:81.85
+
 
 OBB mAPs: (best efficientdet result@20221020)
 +-------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
@@ -87,10 +327,77 @@ OBB mAPs: (best efficientdet result@20221020)
 |model-z0009-054epoch, w*=0.923 | 99.79% | 99.67% | 99.48% | 99.33% | 99.11% | 98.60% | 97.62% | 92.05% | 56.74% |  2.72% | 84.51% | ** +6.2, 5 new datasets including VAID_aabb
 +-------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
 
+(pytorch2022) F:\ws\Object-Detection-Metrics>
+python pascalvoc.py -gt F:\ws\efficientdet_pytorch_win64\_datasets\_test_sets\private170 -det F:\ws\efficientdet_pytorch_win64\_datasets\_test_sets\_archived_det_2022_a\private170_det(model-073-036epoch) -detformat obb_json -gtformat obb_json
+
+       car:  99.96%  2554    22  2555
+       bus: 101.45%    70     0    69
+ big_truck:  96.08%   167     9   173
+     truck: 100.76%   133     1   132
+========================================    50%
+       car:  99.96%  2554    22  2555
+       bus: 101.45%    70     0    69
+ big_truck:  95.46%   166    10   173
+     truck:  99.72%   132     2   132
+========================================    55%
+       car:  99.96%  2554    22  2555
+       bus: 101.45%    70     0    69
+ big_truck:  93.57%   164    12   173
+     truck:  99.72%   132     2   132
+========================================    60%
+       car:  99.71%  2549    27  2555
+       bus: 101.45%    70     0    69
+ big_truck:  90.97%   161    15   173
+     truck:  99.72%   132     2   132
+========================================    65%
+       car:  99.49%  2544    32  2555
+       bus:  99.79%    69     1    69
+ big_truck:  89.32%   159    17   173
+     truck:  98.65%   131     3   132
+========================================    70%
+       car:  99.07%  2534    42  2555
+       bus:  91.96%    65     5    69
+ big_truck:  84.14%   154    22   173
+     truck:  96.29%   129     5   132
+========================================    75%
+       car:  97.64%  2506    70  2555
+       bus:  85.55%    62     8    69
+ big_truck:  70.03%   138    38   173
+     truck:  93.34%   126     8   132
+========================================    80%
+       car:  86.22%  2336   240  2555
+       bus:  61.98%    52    18    69
+ big_truck:  46.81%   109    67   173
+     truck:  85.06%   118    16   132
+========================================    85%
+       car:  44.72%  1643   933  2555
+       bus:  12.28%    24    46    69
+ big_truck:  13.10%    54   122   173
+     truck:  35.15%    72    62   132
+========================================    90%
+       car:   2.60%   355  2221  2555
+       bus:   0.27%     3    67    69
+ big_truck:   0.15%     5   171   173
+     truck:   2.67%    14   120   132
+========================================    95%
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:|   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:| 99.56% | 99.15% | 98.68% | 97.96% | 96.81% | 92.86% | 86.64% | 70.02% | 26.31% |  1.42% | 76.94% |	multi-classes mAP@0.5-0.95
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+SUMMARY:76.94
+
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:|   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:| 99.83% | 99.75% | 99.67% | 99.30% | 98.96% | 98.11% | 95.90% | 83.46% | 41.54% |  2.34% | 81.89% |	single-class AP@0.5-0.95
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+SUMMARY:81.89
 
 todo
     visualize OBB results
         draw or vehicle_markers.json
     implement resize and large image inference
+        SAHI
     export to vehicle_markers.json
         then measure mAP

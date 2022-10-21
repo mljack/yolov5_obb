@@ -1,3 +1,142 @@
+==========================================================================================================================
+yolov5 v6.0 obb version
+
+20220111
+	just found yolov5_obb github updated with latest yolov5 code!!!
+		https://github.com/hukaixuan19970627/yolov5_obb
+			with test/dota dataset support
+
+
+https://github.com/hukaixuan19970627/yolov5_obb/issues/146
+请问训练数据集还需要切分成1024x1024吗
+代码内部自动完成转换操作。
+GetStart.md里有demo，可以选择切也可以不切，支持任意宽高比的图像输入，高分辨率数据集的话选择split进行train/test能够获得更好的结果。
+
+https://github.com/hukaixuan19970627/yolov5_obb/issues/124
+tensorboard看loss曲线图更方便一点。
+需要调节的参数也就各loss权重，数据增强策略的一些参数，别的参数除非你知道代码逻辑否则保持默认就好。
+一些遥感图像的tricks你可以看看这篇博客：https://zhuanlan.zhihu.com/p/422764914
+
+https://github.com/hukaixuan19970627/yolov5_obb/issues/137
+下个版本会基于最新的yolov5进行改建，到时候会支持所有的功能。本来预计本周上传的，但现在精度跌的有点厉害，正在找问题呢
+已更，新版代码无论是速度还是精度都挑不出毛病，yolov5确实香的很
+已更，请下载最新版本，最终精度和训练速度都有很大的提升
+下个版本对labels就不需要自己来转化了，内部代码会完成自动转化，只需要确保labels数据形式和DOTA数据集给出来的一致就行
+
+(pytorch2021) F:\ws\yolov5_obb>cd utils/nms_rotated
+(pytorch2021) F:\ws\yolov5_obb\utils\nms_rotated>python setup.py develop
+[1/4] C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v9.0\bin\nvcc --use-local-env ...
+nvcc fatal   : Option '--cl-version' needs to be specified with option '--use-local'
+cudatoolkit               10.2.89              h74a9793_1
+	i guess it need cuda nvcc for cuda 10.2.89 not cuda 9
+		install cuda 10.2.89 on windows.
+			but still cannot build nms_rotated module
+				just use cpu version instead cuda version
+					and it works!
+
+def make_cuda_ext(name, module, sources, sources_cuda=[]):
+
+    define_macros = []
+    extra_compile_args = {'cxx': []}
+
+    # if torch.cuda.is_available() or os.getenv('FORCE_CUDA', '0') == '1':
+    #     define_macros += [('WITH_CUDA', None)]
+    #     extension = CUDAExtension
+    #     extra_compile_args['nvcc'] = [
+    #         '-D__CUDA_NO_HALF_OPERATORS__',
+    #         '-D__CUDA_NO_HALF_CONVERSIONS__',
+    #         '-D__CUDA_NO_HALF2_OPERATORS__',
+    #     ]
+    #     sources += sources_cuda
+    # else:
+    print(f'Compiling {name} without CUDA')
+    extension = CppExtension
+    # raise EnvironmentError('CUDA is required to compile MMDetection!')
+
+
+						still got RuntimeError: Not compiled with GPU support
+							on python detect.py...
+			restart conda
+				then call vc2017.bat
+					and set DISTUTILS_USE_SDK
+						then python setup.py develop
+							nvcc complains about "undefined eps constant"
+const double eps=1E-8;
+
+__device__ inline int sig(float d){
+    return(d>1E-8)-(d <-1E-8);
+}
+								replace eps with 1e-8
+									and it works!
+
+F:\ws\yolov5_obb>"C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\VC\Auxiliary\Build\vcvars64.bat"
+set DISTUTILS_USE_SDK=1
+(pytorch2021) F:\ws\yolov5_obb\utils\nms_rotated>python setup.py develop
+
+
+(pytorch2021) F:\ws\yolov5_obb>pip install --upgrade requests
+ERROR: pip's dependency resolver does not currently take into account all the packages that
+are installed. This behaviour is the source of the following dependency conflicts.
+sotabenchapi 0.0.16 requires requests==2.22.0, but you have requests 2.27.1 which is incompatible.
+	ignore the package depdency warning
+
+
+cudnn not installed yet
+convert dataset or re-crop dataset for yolov5-v6
+
+
+(pytorch2021) F:\ws\yolov5_obb>python detect.py --device 0 --weight "runs/yolov5m_finetune/weights/best.pt" --source F:\ws\efficientdet_pytorch_win64\_datasets\_test_sets\private170 --view-img
+
+
+update yolov5 v6 obb
+	save .vehicle_markers.json for yolov5_obb
+	python detect.py --device 0 --weight "runs/yolov5m_finetune/weights/best.pt" --source F:\ws\efficientdet_pytorch_win64\_datasets\_test_sets\private170 --view-img --save-json --img-size 4000 6016
+	python pascalvoc.py -gtformat obb_json -detformat obb_json -gt ..\efficientdet_pytorch_win64\_datasets\_test_sets\private170 -det F:\ws\yolov5_obb\runs\detect\exp35
+
+pretrained yolov5m_obb with DOTAv1.5_subsize1024_gap200_rate1.0
+vehicle width: 15 pixels
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:|   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:| 90.44% | 90.40% | 90.27% | 89.90% | 87.37% | 79.30% | 56.19% | 20.20% |  1.82% |  0.01% | 60.59% |
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+SUMMARY:60.59
+
+vehicle width: 20 pixels
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:|   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:| 87.02% | 86.98% | 86.95% | 86.57% | 85.51% | 80.40% | 65.01% | 34.59% |  4.90% |  0.04% | 61.80% |
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+SUMMARY:61.80
+
+vehicle width: 25 pixels
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:|   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:| 86.89% | 86.89% | 86.80% | 86.35% | 85.33% | 80.97% | 71.91% | 44.09% | 11.58% |  0.19% | 64.10% |
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+SUMMARY:64.10
+
+vehicle width: 30 pixels
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:|   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:| 87.76% | 87.69% | 87.50% | 87.41% | 86.50% | 82.45% | 72.92% | 48.56% | 14.58% |  0.26% | 65.56% |
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+SUMMARY:65.56
+
+vehicle width: 35 pixels
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:|   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+DETAIL:| 87.33% | 87.30% | 87.13% | 86.47% | 85.70% | 81.81% | 71.73% | 48.41% | 16.98% |  0.34% | 65.32% |
+DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+SUMMARY:65.32
+
+===================================================================================================================================================
+20221015
+
 https://github.com/mljack/yolov5_obb/blob/master/docs/install.md
 
 conda create -n yolov5_obb python=3.9 -y 
@@ -45,7 +184,7 @@ exp7_epoch50          0.864             85.40%			81.85% ???
 exp8_epoch32          0.861             84.77%
 
 +-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
-|                 |   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
+| cropped_OBBmAP  |   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
 +-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
 | exp5_epoch18    | 99.60% | 99.56% | 99.51% | 99.42% | 99.33% | 98.98% | 97.97% | 91.99% | 56.77% |  2.07% | 84.52% |
 +-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
@@ -58,15 +197,17 @@ exp8_epoch32          0.861             84.77%
 python detect.py --img-size 4000 6016 --view-img --device=0 --weights runs/train/exp7/weights/epoch50.pt --save-json --source private170
     large --img-size
         sliced or resized in yolov5 6.0 inference?
+		yolov v1
+			dense prediction + NMS
+				image size doesn't affect inference results much
+					pixel size of objects do affect inference results a lot.
+		the --img-size option is the final input img size
+			I hack the code to resize img to match vehicle width to 28 pixels and pad them to img_size
+				TODO: split private170 to different img-size set to improve inference speed.
 
 
 
-
-
-
-
-
-measurement of best model
+yolov5 best model metric
     fitness = 0.1*{mAP@0.5} + 0.9*{mAP@0.5:0.95}
 
 def load_mosaic(self, index):
@@ -149,7 +290,7 @@ https://github.com/rafaelpadilla/review_object_detection_metrics
 
 
 
-    with use_07_metric=False
+    with use_07_metric=False (--iou-thres 0.4 (default))
     mAP@IoU0.50:  99.57%
     mAP@IoU0.55:  99.57%
     mAP@IoU0.60:  99.47%
@@ -164,22 +305,10 @@ https://github.com/rafaelpadilla/review_object_detection_metrics
 
     test on different nms iou threshold:
 
-    --iou-thres 0.6 --conf-thres=0.01
-    mAP@IoU0.50:  99.67%
-    mAP@IoU0.55:  99.67%
-    mAP@IoU0.60:  99.57%
-    mAP@IoU0.65:  99.50%
-    mAP@IoU0.70:  99.24%
-    mAP@IoU0.75:  98.74%
-    mAP@IoU0.80:  97.65%
-    mAP@IoU0.85:  90.67%
-    mAP@IoU0.90:  60.26%
-    mAP@IoU0.95:   3.23%
-    mmAP:84.82%
-
 (yolov5_obb) me@node2:~/2TSSD/ws/yolov5_obb$
 python val.py --batch-size 32 --imgsz 768 --device=0 --data "data/eagle003.yaml" --weights runs/train/exp7/weights/epoch50.pt --save-json --exist-ok --name exp29 --conf-thres 0.01 --iou-thres 0.x
-OBB mAP (yolov5 6.0 obb: exp7/weights/epoch50.pt)
+
+cropped_OBBmAP (yolov5 6.0 obb: exp7/weights/epoch50.pt)
 +-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
 |  exp7_epoch50   |   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
 +-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
@@ -222,100 +351,119 @@ OBB mAP (yolov5 6.0 obb: exp7/weights/epoch50.pt)
 | nms_iou_0.99    | 43.30% | 43.30% | 43.29% | 43.28% | 43.26% | 43.21% | 43.08% | 41.68% | 32.16% |  3.25% | 37.98% |
 +-----------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
 
-python pascalvoc.py -gt F:\ws\efficientdet_pytorch_win64\_datasets\_test_sets\private170 -det F:\yolov5_6.0_exp7_epoch50_obb -detformat obb_json -gtformat obb_json
-人工检查结果
-	big_truck漏检极少，框不像efficientdet偏离车整体很多或仅包含一半车体
-	但两俩小车隔一个车道并排时，常在中间多产生一个误检目标，长度类似big_truck
-	整体OBB紧实程度不如efficientdet
-	yolov5_6_obb 在不同车辆类型上的检测质量更均衡，宽度偏差上也没有明显偏宽，而是有宽有窄
+人工检查yolov5_6_exp7_epoch50 结果
+	角度检测精度高于5度，框由于方向更加准确，OBB包裹普遍更紧，对于提高大车IoU比较有帮助
+	误检少了不少，但两俩小车隔一个车道并排时，常在中间多产生一个误检目标，长度类似big_truck
+	big_truck漏检减少，框不像efficientdet偏离车整体很多或仅包含一半车体，但也没有小车结果那样包裹紧密，还是有一定的偏差和空隙
+	整体OBB紧实程度明显高于efficientdet_073，但也存在不少OBB更小但没裹住部分车体边缘的情况
+	但big_truck检测结果OBB包裹误差明显大于小车，还要增加训练样本中大车数目和种类丰富度
+	yolov5_6_obb 在不同车辆类型上的检测质量更均衡，宽度偏差上也没有明显偏宽
 		所以统一缩小宽度不起作用
 
+python pascalvoc.py -gt F:\ws\efficientdet_pytorch_win64\_datasets\_test_sets\private170 -det F:\yolov5_6.0_exp7_epoch50_obb -detformat obb_json -gtformat obb_json
+
 compare with efficientdet_073 for multi-classes APs
-					multi-classes mAP@0.5-0.95	single-classes mAP@0.5-0.95
-yolov5_6_exp7_epoch50			80.78%				81.85%
-yolov5_6_exp7_epoch50(w*=0.98)		80.23%				81.56%
-yolov5_6_exp7_epoch50(w*=1.02)		80.57%				81.49%
-model-073-036epoch			76.94%				81.89%
-model-073-036epoch (w*=0.938 if ratio<3)78.28%				
-model-073-036epoch (w*=0.938 if ratio>3)78.76%				
-model-073-036epoch (w*=0.938 if ratio<4)79.64%
-model-073-036epoch (w*=0.938 if ratio<5)80.17%
-model-073-036epoch (w*=0.938 if ratio<6)80.19%				84.47%
-model-073-036epoch (w*=0.938 if ratio<7)80.14%
-model-073-036epoch (w*=0.938 if ratio<8)80.14%
-model-073-036epoch (w*=0.938 if ratio<9)80.14%
-model-073-036epoch (w*=0.938)		80.14%				84.46%
-				
+                                        multi-classes mAP@0.5-0.95    single-classes mAP@0.5-0.95
+yolov5_6_exp7_epoch50                      80.78%                        81.85%
+yolov5_6_exp7_epoch50(w*=0.98)             80.23%                        81.56%
+yolov5_6_exp7_epoch50(w*=1.02)             80.57%                        81.49%
+model-073-036epoch                         76.94%                        81.89%
+model-073-036epoch (w*=0.938 if ratio<3)   78.28%
+model-073-036epoch (w*=0.938 if ratio>3)   78.76%
+model-073-036epoch (w*=0.938 if ratio<4)   79.64%
+model-073-036epoch (w*=0.938 if ratio<5)   80.17%
+model-073-036epoch (w*=0.938 if ratio<6)   80.19%                        84.47%
+model-073-036epoch (w*=0.938 if ratio<7)   80.14%
+model-073-036epoch (w*=0.938 if ratio<8)   80.14%
+model-073-036epoch (w*=0.938 if ratio<9)   80.14%
+model-073-036epoch (w*=0.938)              80.14%                        84.46%
+
 
 todo: more detail check
 	w *= 0.923 trick doesn't work on yolov5_6.0_obb trained on dataset@2021
 	OBBmAP results don't match between Object-Detection-Metrics and yolov5_dot_evaluate_task1
 		check more details
 
-                 AP    TP    FP    GT
-       car:  99.69%  2547    16  2555
-       bus: 100.00%    69     0    69
- big_truck:  98.27%   170     0   173
-     truck: 100.00%   132     1   132
-========================================    50%
-       car:  99.69%  2547    16  2555
-       bus: 100.00%    69     0    69
- big_truck:  98.27%   170     0   173
-     truck: 100.00%   132     1   132
-========================================    55%
-       car:  99.69%  2547    16  2555
-       bus: 100.00%    69     0    69
- big_truck:  98.27%   170     0   173
-     truck: 100.00%   132     1   132
-========================================    60%
-       car:  99.65%  2546    17  2555
-       bus: 100.00%    69     0    69
- big_truck:  97.68%   169     1   173
-     truck: 100.00%   132     1   132
-========================================    65%
-       car:  99.61%  2545    18  2555
-       bus: 100.00%    69     0    69
- big_truck:  97.02%   168     2   173
-     truck: 100.00%   132     1   132
-========================================    70%
-       car:  99.47%  2542    21  2555
-       bus: 100.00%    69     0    69
- big_truck:  93.55%   163     7   173
-     truck: 100.00%   132     1   132
-========================================    75%
-       car:  98.55%  2523    40  2555
-       bus: 100.00%    69     0    69
- big_truck:  85.73%   154    16   173
-     truck:  98.96%   131     2   132
-========================================    80%
-       car:  87.50%  2329   234  2555
-       bus:  78.18%    60     9    69
- big_truck:  75.57%   140    30   173
-     truck:  86.67%   119    14   132
-========================================    85%
-       car:  37.64%  1427  1136  2555
-       bus:  39.76%    41    28    69
- big_truck:  24.36%    71    99   173
-     truck:  34.07%    68    65   132
-========================================    90%
-       car:   0.49%   125  2438  2555
-       bus:   0.57%     4    65    69
- big_truck:   1.09%    10   160   173
-     truck:   1.19%    10   123   132
-========================================    95%
-DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
-DETAIL:|   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
-DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
-DETAIL:| 99.49% | 99.49% | 99.49% | 99.33% | 99.16% | 98.25% | 95.81% | 81.98% | 33.96% |  0.83% | 80.78% |	multi-classes mAP@0.5-0.95
-DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
-SUMMARY:80.78
 
-DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
-DETAIL:|   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
-DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
-DETAIL:| 99.62% | 99.62% | 99.62% | 99.56% | 99.48% | 99.19% | 97.96% | 86.46% | 36.49% |  0.48% | 81.85% |	single-class AP@0.5-0.95
-DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
-SUMMARY:81.85
+(pytorch2022) F:\ws\Object-Detection-Metrics>
+python pascalvoc.py -gt F:\ws\efficientdet_pytorch_win64\_datasets\_test_sets\private170 -det F:\ws\efficientdet_pytorch_win64\_datasets\_test_sets\_archived_det_2022_a\private170_det(yolov5_6.0_exp7_epoch50) -detformat obb_json -gtformat obb_json
+python pascalvoc.py -gt F:\ws\efficientdet_pytorch_win64\_datasets\_test_sets\private170 -det F:\ws\efficientdet_pytorch_win64\_datasets\_test_sets\_archived_det_2022_a\private170_det(model-073-036epoch) -detformat obb_json -gtformat obb_json
+
+yolov5_6_exp7_epoch50                              efficientdet_073-036epoch                           efficientdet_073-036epoch, w*=0.938
+                 AP    TP    FP    GT                               AP    TP    FP    GT                               AP    TP    FP    GT
+       car:  99.69%  2547    16  2555                     car:  99.96%  2554    22  2555                     car:  99.96%  2554    22  2555
+       bus: 100.00%    69     0    69                     bus: 101.45%    70     0    69                     bus: 101.45%    70     0    69
+ big_truck:  98.27%   170     0   173               big_truck:  96.08%   167     9   173               big_truck:  96.82%   168     8   173
+     truck: 100.00%   132     1   132                   truck: 100.76%   133     1   132                   truck: 100.76%   133     1   132
+========================================    50%    ========================================    50%    ========================================    50%
+       car:  99.69%  2547    16  2555                     car:  99.96%  2554    22  2555                     car:  99.96%  2554    22  2555
+       bus: 100.00%    69     0    69                     bus: 101.45%    70     0    69                     bus: 101.45%    70     0    69
+ big_truck:  98.27%   170     0   173               big_truck:  95.46%   166    10   173               big_truck:  95.46%   166    10   173
+     truck: 100.00%   132     1   132                   truck:  99.72%   132     2   132                   truck: 100.76%   133     1   132
+========================================    55%    ========================================    55%    ========================================    55%
+       car:  99.69%  2547    16  2555                     car:  99.96%  2554    22  2555                     car:  99.96%  2554    22  2555
+       bus: 100.00%    69     0    69                     bus: 101.45%    70     0    69                     bus: 101.45%    70     0    69
+ big_truck:  98.27%   170     0   173               big_truck:  93.57%   164    12   173               big_truck:  95.46%   166    10   173
+     truck: 100.00%   132     1   132                   truck:  99.72%   132     2   132                   truck:  99.72%   132     2   132
+========================================    60%    ========================================    60%    ========================================    60%
+       car:  99.65%  2546    17  2555                     car:  99.71%  2549    27  2555                     car:  99.92%  2553    23  2555
+       bus: 100.00%    69     0    69                     bus: 101.45%    70     0    69                     bus: 101.45%    70     0    69
+ big_truck:  97.68%   169     1   173               big_truck:  90.97%   161    15   173               big_truck:  91.55%   162    14   173
+     truck: 100.00%   132     1   132                   truck:  99.72%   132     2   132                   truck:  99.72%   132     2   132
+========================================    65%    ========================================    65%    ========================================    65%
+       car:  99.61%  2545    18  2555                     car:  99.49%  2544    32  2555                     car:  99.61%  2547    29  2555
+       bus: 100.00%    69     0    69                     bus:  99.79%    69     1    69                     bus:  99.79%    69     1    69
+ big_truck:  97.02%   168     2   173               big_truck:  89.32%   159    17   173               big_truck:  90.44%   160    16   173
+     truck: 100.00%   132     1   132                   truck:  98.65%   131     3   132                   truck:  97.80%   130     4   132
+========================================    70%    ========================================    70%    ========================================    70%
+       car:  99.47%  2542    21  2555                     car:  99.07%  2534    42  2555                     car:  99.41%  2542    34  2555
+       bus: 100.00%    69     0    69                     bus:  91.96%    65     5    69                     bus:  97.74%    68     2    69
+ big_truck:  93.55%   163     7   173               big_truck:  84.14%   154    22   173               big_truck:  89.32%   159    17   173
+     truck: 100.00%   132     1   132                   truck:  96.29%   129     5   132                   truck:  96.29%   129     5   132
+========================================    75%    ========================================    75%    ========================================    75%
+       car:  98.55%  2523    40  2555                     car:  97.64%  2506    70  2555                     car:  98.68%  2528    48  2555
+       bus: 100.00%    69     0    69                     bus:  85.55%    62     8    69                     bus:  91.96%    65     5    69
+ big_truck:  85.73%   154    16   173               big_truck:  70.03%   138    38   173               big_truck:  82.51%   152    24   173
+     truck:  98.96%   131     2   132                   truck:  93.34%   126     8   132                   truck:  94.86%   128     6   132
+========================================    80%    ========================================    80%    ========================================    80%
+       car:  87.50%  2329   234  2555                     car:  86.22%  2336   240  2555                     car:  93.13%  2433   143  2555
+       bus:  78.18%    60     9    69                     bus:  61.98%    52    18    69                     bus:  76.43%    59    11    69
+ big_truck:  75.57%   140    30   173               big_truck:  46.81%   109    67   173               big_truck:  58.56%   123    53   173
+     truck:  86.67%   119    14   132                   truck:  85.06%   118    16   132                   truck:  84.53%   118    16   132
+========================================    85%    ========================================    85%    ========================================    85%
+       car:  37.64%  1427  1136  2555                     car:  44.72%  1643   933  2555                     car:  59.65%  1873   703  2555
+       bus:  39.76%    41    28    69                     bus:  12.28%    24    46    69                     bus:  32.04%    34    36    69
+ big_truck:  24.36%    71    99   173               big_truck:  13.10%    54   122   173               big_truck:  27.84%    84    92   173
+     truck:  34.07%    68    65   132                   truck:  35.15%    72    62   132                   truck:  42.94%    79    55   132
+========================================    90%    ========================================    90%    ========================================    90%
+       car:   0.49%   125  2438  2555                     car:   2.60%   355  2221  2555                     car:   3.10%   388  2188  2555
+       bus:   0.57%     4    65    69                     bus:   0.27%     3    67    69                     bus:   0.53%     4    66    69
+ big_truck:   1.09%    10   160   173               big_truck:   0.15%     5   171   173               big_truck:   1.47%    18   158   173
+     truck:   1.19%    10   123   132                   truck:   2.67%    14   120   132                   truck:   1.04%    11   123   132
+========================================    95%    ========================================    95%    ========================================    95%
+80.78%                                             76.94%                                             80.14%
+
+multi-classes mAP@0.5-0.95
++-------------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+|                                     |   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
++-------------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| yolov5_6_exp7_epoch50               | 99.49% | 99.49% | 99.49% | 99.33% | 99.16% | 98.25% | 95.81% | 81.98% | 33.96% |  0.83% | 80.78% |
++-------------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| efficientdet_073-036epoch           | 99.56% | 99.15% | 98.68% | 97.96% | 96.81% | 92.86% | 86.64% | 70.02% | 26.31% |  1.42% | 76.94% |
++-------------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| efficientdet_073-036epoch, w*=0.938 | 99.75% | 99.41% | 99.15% | 98.16% | 96.91% | 95.69% | 92.00% | 78.16% | 40.62% |  1.53% | 80.14% |
++-------------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+
+single-class AP@0.5-0.95
++-------------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+|                                     |   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
++-------------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| yolov5_6_exp7_epoch50               | 99.62% | 99.62% | 99.62% | 99.56% | 99.48% | 99.19% | 97.96% | 86.46% | 36.49% |  0.48% | 81.85% |
++-------------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| efficientdet_073-036epoch           | 99.83% | 99.75% | 99.67% | 99.30% | 98.96% | 98.11% | 95.90% | 83.46% | 41.54% |  2.34% | 81.89% |
++-------------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+| efficientdet_073-036epoch, w*=0.938 | 99.86% | 99.79% | 99.75% | 99.54% | 99.07% | 98.76% | 97.63% | 90.68% | 56.66% |  2.83% | 84.46% |
++-------------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
 
 
 OBB mAPs: (best efficientdet result@20221020)
@@ -327,77 +475,8 @@ OBB mAPs: (best efficientdet result@20221020)
 |model-z0009-054epoch, w*=0.923 | 99.79% | 99.67% | 99.48% | 99.33% | 99.11% | 98.60% | 97.62% | 92.05% | 56.74% |  2.72% | 84.51% | ** +6.2, 5 new datasets including VAID_aabb
 +-------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
 
-(pytorch2022) F:\ws\Object-Detection-Metrics>
-python pascalvoc.py -gt F:\ws\efficientdet_pytorch_win64\_datasets\_test_sets\private170 -det F:\ws\efficientdet_pytorch_win64\_datasets\_test_sets\_archived_det_2022_a\private170_det(model-073-036epoch) -detformat obb_json -gtformat obb_json
-
-       car:  99.96%  2554    22  2555
-       bus: 101.45%    70     0    69
- big_truck:  96.08%   167     9   173
-     truck: 100.76%   133     1   132
-========================================    50%
-       car:  99.96%  2554    22  2555
-       bus: 101.45%    70     0    69
- big_truck:  95.46%   166    10   173
-     truck:  99.72%   132     2   132
-========================================    55%
-       car:  99.96%  2554    22  2555
-       bus: 101.45%    70     0    69
- big_truck:  93.57%   164    12   173
-     truck:  99.72%   132     2   132
-========================================    60%
-       car:  99.71%  2549    27  2555
-       bus: 101.45%    70     0    69
- big_truck:  90.97%   161    15   173
-     truck:  99.72%   132     2   132
-========================================    65%
-       car:  99.49%  2544    32  2555
-       bus:  99.79%    69     1    69
- big_truck:  89.32%   159    17   173
-     truck:  98.65%   131     3   132
-========================================    70%
-       car:  99.07%  2534    42  2555
-       bus:  91.96%    65     5    69
- big_truck:  84.14%   154    22   173
-     truck:  96.29%   129     5   132
-========================================    75%
-       car:  97.64%  2506    70  2555
-       bus:  85.55%    62     8    69
- big_truck:  70.03%   138    38   173
-     truck:  93.34%   126     8   132
-========================================    80%
-       car:  86.22%  2336   240  2555
-       bus:  61.98%    52    18    69
- big_truck:  46.81%   109    67   173
-     truck:  85.06%   118    16   132
-========================================    85%
-       car:  44.72%  1643   933  2555
-       bus:  12.28%    24    46    69
- big_truck:  13.10%    54   122   173
-     truck:  35.15%    72    62   132
-========================================    90%
-       car:   2.60%   355  2221  2555
-       bus:   0.27%     3    67    69
- big_truck:   0.15%     5   171   173
-     truck:   2.67%    14   120   132
-========================================    95%
-DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
-DETAIL:|   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
-DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
-DETAIL:| 99.56% | 99.15% | 98.68% | 97.96% | 96.81% | 92.86% | 86.64% | 70.02% | 26.31% |  1.42% | 76.94% |	multi-classes mAP@0.5-0.95
-DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
-SUMMARY:76.94
-
-DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
-DETAIL:|   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
-DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
-DETAIL:| 99.83% | 99.75% | 99.67% | 99.30% | 98.96% | 98.11% | 95.90% | 83.46% | 41.54% |  2.34% | 81.89% |	single-class AP@0.5-0.95
-DETAIL:+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
-SUMMARY:81.89
-
 todo
-    visualize OBB results
-        draw or vehicle_markers.json
     implement resize and large image inference
         SAHI
-    export to vehicle_markers.json
-        then measure mAP
+    read issue updates of yolov5_obb github
+

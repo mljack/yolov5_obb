@@ -506,7 +506,54 @@ F:\ws\CyTrafficEditor2\Source\CyTrafficEditor\CyTraffic\data\videos
 					fix AP > 100%
 					more detail check
 
-	
+weighted box fusion ensemble (OBB)
+Stochastic Weights Averaging (SWA) in training
+
+
+https://github.com/ultralytics/yolov5
+yolov5 github readme/doc/tutorial
+	bigger model?
+		WIP: exp9 yolov5x6
+	train from scratch?
+
+	https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data
+		Pretrained weights
+			--weights yolov5s.pt
+		randomly initialized --weights '' --cfg yolov5s.yaml
+	ClearML Logging and Automation
+	Weights & Biases Logging
+	Local Logging
+	Images per class. ≥ 1500 images per class recommended
+	Instances per class. ≥ 10000 instances (labeled objects) per class recommended
+	Background images.
+		Background images are images with no objects that are added to a dataset to reduce False Positives (FP).
+		We recommend about 0-10% background images to help reduce FPs (COCO has 1000 background images for reference,
+		1% of the total). No labels are required for background images.
+	Start from Pretrained weights.
+		Recommended for small to medium sized datasets (i.e. VOC, VisDrone, GlobalWheat).
+	Start from Scratch.
+		Recommended for large datasets (i.e. COCO, Objects365, OIv6).
+	In general, increasing augmentation hyperparameters will reduce and delay overfitting, allowing for longer trainings and higher final mAP.
+
+
+	https://github.com/ultralytics/yolov5/wiki/Tips-for-Best-Training-Results
+	http://karpathy.github.io/2019/04/25/recipe/
+		todo
+	Hyperparameter Evolution
+	https://github.com/ultralytics/yolov5/issues/607
+
+	Model Ensembling Tutorial
+		https://github.com/ultralytics/yolov5/issues/318
+		python detect.py --weights model1.pt model2.pt --augment
+
+		Typically I've seen the best result when merging output grids directly, (i.e. ensembling YOLOv5l and YOLOv5x),
+		rather than simply appending boxes from multiple models for NMS to sort out. This is not always possible however,
+		for example Ensembling an EfficientDet model with YOLOv5x, you can not merge grids, you must use NMS or WBF
+		(or Merge NMS) to get a final result.
+
+	Transfer Learning with Frozen Layers
+		https://github.com/ultralytics/yolov5/issues/1314
+
 
 todo
     implement resize and large image inference

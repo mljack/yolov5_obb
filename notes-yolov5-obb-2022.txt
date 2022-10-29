@@ -185,7 +185,10 @@ exp10   yolov5m6           eagle+longyao   eagle+longyao       DOTA             
                                                                                       private170_mAP                  85.4%@epoch60 85.3%@epoch50 85.4%@epoch40 85.5%@epoch30 85.0%@epoch20 84.4%@epoch10
 exp11   yolov5m            eagle+longyao   eagle+longyao       DOTA                   eagle+longyao_val 93.4%@epoch99 92.1%@epoch60 91.4%@epoch50 90.5%@epoch40 89.3%@epoch30 87.8%@epoch20 86.4%@epoch10
                                                                                       private170_mAP    86.7%@epoch99 86.8%@epoch60 86.7%@epoch50 86.3%@epoch40 86.2%@epoch30 86.0%@epoch20 85.8%@epoch20
-
+	yolov5 6版本和之前的版本训练超参差异较大，导致训练收敛速度下降(在val set上)，(在test set上也稍低1% mAP)
+		使用yolov5_obb提供的dota v1.5 obb预训练权重和使用yolov5官方的COCO预训练权重
+			再用data/hyps/obb/hyp.finetune_dota.yaml的schedule来finetuning
+				最终训练精度类似，没有明显区别
 
 python val.py --batch-size 16 --imgsz 768 --device=1 --data "data/eagle003.yaml" --weights runs/train/exp9/weights/epoch40.pt
 
@@ -491,13 +494,15 @@ single-class AP@0.5-0.95
 
 
 
-OBB mAPs: (best efficientdet result@20221020)
+OBB mAPs: (best efficientdet result@20221030)
 +-------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
 | model + w_scale               |   50%  |   55%  |   60%  |   65%  |   70%  |   75%  |   80%  |   85%  |   90%  |   95%  | 50-95% |
 +-------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
 |model-073-036epoch, w*=0.938   | 99.86% | 99.79% | 99.75% | 99.54% | 99.07% | 98.76% | 97.60% | 90.65% | 56.74% |  2.83% | 84.46% | * +2.56, datasets@2021
 +-------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
 |model-z0009-054epoch, w*=0.923 | 99.79% | 99.67% | 99.48% | 99.33% | 99.11% | 98.60% | 97.62% | 92.05% | 56.74% |  2.72% | 84.51% | ** +6.2, 5 new datasets including VAID_aabb
++-------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
+|model-zb0041-015epoch,w*=0.938 | 99.66% | 99.66% | 99.66% | 99.48% | 99.22% | 98.86% | 97.72% | 91.97% | 56.84% |  2.77% | 84.58% | *** +4.1, datasets@2021, AdamW + OneCycleLR
 +-------------------------------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+--------+
 
 try to fuse results
@@ -525,9 +530,9 @@ Stochastic Weights Averaging (SWA) in training
 https://github.com/ultralytics/yolov5
 yolov5 github readme/doc/tutorial
 	bigger model?
-		WIP: exp9 yolov5x6
-	train from scratch?
-
+		exp9 yolov5x6
+	train from scratch? with COCO
+		exp10, exp11
 	https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data
 		Pretrained weights
 			--weights yolov5s.pt
@@ -567,8 +572,35 @@ yolov5 github readme/doc/tutorial
 		https://github.com/ultralytics/yolov5/issues/1314
 
 
-todo
-    implement resize and large image inference
-        SAHI
-    read issue updates of yolov5_obb github
+\\192.168.2.22\WD_4T_red_2021\02_remapped_videos\_dataset_updates\private170_with_vehicle_types
+\\192.168.2.22\WD_4T_red_2021\02_remapped_videos\_dataset_updates\private170_old (no vehicle types)
+\\192.168.2.22\WD_4T_red_2021\02_remapped_videos\_dataset_updates\private170_2(by zhaoqiang & wangxinyu)
 
+
+(pytorch2022) F:\ws\CyTrafficEditor2\Source\CyTrafficEditor\CyTraffic\data\videos>
+	python compute_mIoU.py private170 private170_zqwxy
+		matched[private170]:        [2936], mIoU:[92.4172%] 大量在[84.87%,98.85%]范围，尾部在[73.40%,84.87%]范围 峰值94.58%
+			有少量不一致标注[mIoU==0%](估计跟我后期ps修改图片有关。。。)
+	python compute_mIoU.py private170_zqwxy private170
+		matched[private170_zqwxy]:  [2929], mIoU:[92.6686%] 大量在[84.78%,98.93%]范围，尾部在[73.40%,84.78%]范围 峰值94.58%
+	人的标注误差 IoU > 84.8%, 均值在IoU 92.5%附近
+		多次或多人标注间 IoU < 84.8% 打回重新标注
+
+
+todo
+	implement resize and large image inference
+		SAHI
+	read issue updates of yolov5_obb github
+	label smoothing
+	train yolov5m6 obb with efficientdet?
+
+	扩大测试集(yolov5_obb训练中test set mAP远落后于val set)
+		93.4%@epoch99 vs 86.7%@epoch99
+	修改测试metric，不再使用mAP@0.5_0.95 ? 
+		100% recall
+		high IoU
+	筛选训练集合，剔除与测试集无关的训练集图片
+	图像分割模型？
+		车道线
+		车体
+		阴影

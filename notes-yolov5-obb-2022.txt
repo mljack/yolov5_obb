@@ -171,12 +171,24 @@ yolov5_obb/utils/datasets.py
                 #assert (l >= 0).all(), f'negative label values {l[l < 0]}, please check your dota format labels'
                     comment the negative coodinates checking
 
-exp        train           val                 hyp             epochs       val_mAP     private170_mAP(val.py)
-exp4       eagle           private170          DroneVehicle    17/23        84.835%     85.1%
-exp5       eagle           private170          DOTA            17/19        85.308%     85.8%
-exp6       eagle+longyao   private170          DOTA            13/23        85.701%     86.1%
-exp7       eagle+longyao   eagle+longyao       DOTA            99/99        92.760%     86.2%@epoch99 86.3%epoch75 86.4%@epoch50 86.0%@epoch25 85.8%@epoch10
-exp8       eagle+longyao   eagle+longyao       DroneVehicle    32/interrupted 88.272%                              86.1%@epoch32 85.8%@epoch25 85.1%@epoch10
+exp                        train           val                 hyp             epochs       val_mAP     private170_mAP(val.py)
+exp4    yolov5m_finetune   eagle           private170          DroneVehicle    17/23        84.835%     85.1%
+exp5    yolov5m_finetune   eagle           private170          DOTA            17/19        85.308%     85.8%
+exp6    yolov5m_finetune   eagle+longyao   private170          DOTA            13/23        85.701%     86.1%
+exp7    yolov5m_finetune   eagle+longyao   eagle+longyao       DOTA            99/99        92.760%     
+                                                                                      eagle+longyao_val 93.6%@epoch99 93.1%epoch75 92.2%@epoch50 90.5%@epoch25 88.7%@epoch10
+                                                                                      private170_mAP    86.2%@epoch99 86.3%epoch75 86.4%@epoch50 86.0%@epoch25 85.8%@epoch10
+exp8    yolov5m_finetune   eagle+longyao   eagle+longyao       DroneVehicle    32/interrupted 88.272%                              86.1%@epoch32 85.8%@epoch25 85.1%@epoch10
+exp9    yolov5x6           eagle+longyao   eagle+longyao       DOTA                   eagle+longyao_val               88.9%@epoch60 87.1%@epoch50 87.1%@epoch40 86.0%@epoch30 85.5%@epoch20 85.2%@epoch10
+                                                                                      private170_mAP                  85.3%@epoch60 85.1%@epoch50 85.4%@epoch40 85.6%@epoch30 84.6%@epoch20 84.9%@epoch10
+exp10   yolov5m6           eagle+longyao   eagle+longyao       DOTA                   eagle+longyao_val               86.1%@epoch60 84.9%@epoch50 84.0%@epoch40 83.9%@epoch30 83.5%@epoch20 83.8%@epoch10
+                                                                                      private170_mAP                  85.4%@epoch60 85.3%@epoch50 85.4%@epoch40 85.5%@epoch30 85.0%@epoch20 84.4%@epoch10
+exp11   yolov5m            eagle+longyao   eagle+longyao       DOTA                   eagle+longyao_val 93.4%@epoch99 92.1%@epoch60 91.4%@epoch50 90.5%@epoch40 89.3%@epoch30 87.8%@epoch20 86.4%@epoch10
+                                                                                      private170_mAP    86.7%@epoch99 86.8%@epoch60 86.7%@epoch50 86.3%@epoch40 86.2%@epoch30 86.0%@epoch20 85.8%@epoch20
+
+
+python val.py --batch-size 16 --imgsz 768 --device=1 --data "data/eagle003.yaml" --weights runs/train/exp9/weights/epoch40.pt
+
 
 model        cropped_HBBmAP     cropped_OBBmAP(nms_iou=0.9)	OBBmAP(nms_iou=0.4)
 exp5_epoch18          0.853             84.52%

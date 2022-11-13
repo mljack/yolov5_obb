@@ -184,13 +184,59 @@ exp9    yolov5x6           eagle+longyao   eagle+longyao       DOTA             
 exp10   yolov5m6           eagle+longyao   eagle+longyao       DOTA                   eagle+longyao_val               86.1%@epoch60 84.9%@epoch50 84.0%@epoch40 83.9%@epoch30 83.5%@epoch20 83.8%@epoch10
                                                                                       private170_mAP                  85.4%@epoch60 85.3%@epoch50 85.4%@epoch40 85.5%@epoch30 85.0%@epoch20 84.4%@epoch10
 exp11   yolov5m            eagle+longyao   eagle+longyao       DOTA                   eagle+longyao_val 93.4%@epoch99 92.1%@epoch60 91.4%@epoch50 90.5%@epoch40 89.3%@epoch30 87.8%@epoch20 86.4%@epoch10
-                                                                                      private170_mAP    86.7%@epoch99 86.8%@epoch60 86.7%@epoch50 86.3%@epoch40 86.2%@epoch30 86.0%@epoch20 85.8%@epoch20
+                                                                                      private170_mAP    86.7%@epoch99 86.8%@epoch60 86.7%@epoch50 86.3%@epoch40 86.2%@epoch30 86.0%@epoch20 85.8%@epoch10
+exp13   yolov4x            eagle+longyao   eagle+longyao       DOTA                   eagle+longyao_val               92.5%@epoch60 92.1%@epoch50 91.5%@epoch40 90.7%@epoch30 89.3%@epoch20 87.8%@epoch10
+                                                                                      private170_mAP                  86.5%@epoch60 86.7%@epoch50 86.6%@epoch40 86.6%@epoch30 86.3%@epoch20 86.3%@epoch10
+
 	yolov5 6版本和之前的版本训练超参差异较大，导致训练收敛速度下降(在val set上)，(在test set上也稍低1% mAP)
 		使用yolov5_obb提供的dota v1.5 obb预训练权重和使用yolov5官方的COCO预训练权重
 			再用data/hyps/obb/hyp.finetune_dota.yaml的schedule来finetuning
 				最终训练精度类似，没有明显区别
 
 python val.py --batch-size 16 --imgsz 768 --device=1 --data "data/eagle003.yaml" --weights runs/train/exp9/weights/epoch40.pt
+
+increase lr (SGD + OneCycleLR) and train yolov5m6 again
+    lr0: 0.01
+    lrf: 0.2
+        to
+    lr0: 0.04
+    lrf: 0.05
+        blown at 15epoch
+
+train yolov5x
+    python -u train.py --save-period 1 --weight "yolov5x.pt" --data "data/eagle003c.yaml" --hyp "data/hyps/obb/hyp.finetune_eagle003b.yaml" --img-size 768 --batch-size 32 --epochs 100 --name exp13 --exist-ok --device 0 2>&1 | tee -a eagle_exp13_20221101_g_eagle_longyao_dataset_val_dota_finetune_hyp_yolov5x.log
+     Epoch   gpu_mem       box       obj       cls     theta    labels  img_size
+  0%|          | 0/2106 [00:01<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/me/1TSSD/maliang/yolov5_obb/train.py", line 633, in <module>
+    main(opt)
+  File "/home/me/1TSSD/maliang/yolov5_obb/train.py", line 530, in main
+    train(opt.hyp, opt, device, callbacks)
+  File "/home/me/1TSSD/maliang/yolov5_obb/train.py", line 325, in train
+    pred = model(imgs)  # forward
+  File "/home/me/anaconda3/envs/yolov5_obb/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1102, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/me/1TSSD/maliang/yolov5_obb/models/yolo.py", line 147, in forward
+    return self._forward_once(x, profile, visualize)  # single-scale inference, train
+  File "/home/me/1TSSD/maliang/yolov5_obb/models/yolo.py", line 177, in _forward_once
+    x = m(x)  # run
+  File "/home/me/anaconda3/envs/yolov5_obb/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1102, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/me/1TSSD/maliang/yolov5_obb/models/common.py", line 191, in forward
+    x = self.cv1(x)
+  File "/home/me/anaconda3/envs/yolov5_obb/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1102, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/me/1TSSD/maliang/yolov5_obb/models/common.py", line 46, in forward
+    return self.act(self.bn(self.conv(x)))
+  File "/home/me/anaconda3/envs/yolov5_obb/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1102, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/me/anaconda3/envs/yolov5_obb/lib/python3.9/site-packages/torch/nn/modules/conv.py", line 446, in forward
+    return self._conv_forward(input, self.weight, self.bias)
+  File "/home/me/anaconda3/envs/yolov5_obb/lib/python3.9/site-packages/torch/nn/modules/conv.py", line 442, in _conv_forward
+    return F.conv2d(input, weight, bias, self.stride,
+RuntimeError: Unable to find a valid cuDNN algorithm to run convolution
+    just another due to large batch size...
+        reduce batch size to 16, then it trains fine...
 
 
 model        cropped_HBBmAP     cropped_OBBmAP(nms_iou=0.9)	OBBmAP(nms_iou=0.4)

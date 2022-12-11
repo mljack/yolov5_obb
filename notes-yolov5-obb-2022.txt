@@ -185,8 +185,11 @@ exp10   yolov5m6           eagle+longyao   eagle+longyao       DOTA             
                                                                                       private170_mAP                  85.4%@epoch60 85.3%@epoch50 85.4%@epoch40 85.5%@epoch30 85.0%@epoch20 84.4%@epoch10
 exp11   yolov5m            eagle+longyao   eagle+longyao       DOTA                   eagle+longyao_val 93.4%@epoch99 92.1%@epoch60 91.4%@epoch50 90.5%@epoch40 89.3%@epoch30 87.8%@epoch20 86.4%@epoch10
                                                                                       private170_mAP    86.7%@epoch99 86.8%@epoch60 86.7%@epoch50 86.3%@epoch40 86.2%@epoch30 86.0%@epoch20 85.8%@epoch10
-exp13   yolov4x            eagle+longyao   eagle+longyao       DOTA                   eagle+longyao_val               92.5%@epoch60 92.1%@epoch50 91.5%@epoch40 90.7%@epoch30 89.3%@epoch20 87.8%@epoch10
+exp13   yolov5x            eagle+longyao   eagle+longyao       DOTA                   eagle+longyao_val               92.5%@epoch60 92.1%@epoch50 91.5%@epoch40 90.7%@epoch30 89.3%@epoch20 87.8%@epoch10
                                                                                       private170_mAP                  86.5%@epoch60 86.7%@epoch50 86.6%@epoch40 86.6%@epoch30 86.3%@epoch20 86.3%@epoch10
+exp14   yolov5x 640        eagle+longyao   eagle+longyao       DOTA               768 eagle+longyao_val 92.6%@epoch99 %@epoch60 %@epoch50 %@epoch40 %@epoch30 %@epoch20 85.2%@epoch10
+                                                                                  768 private170_mAP    86.1%@epoch99 86.3%@epoch60 86.3%@epoch50 86.4%@epoch40 86.3%@epoch30 85.8%@epoch20 85.7%@epoch10
+                                                                                  640 private170_mAP    85.7%@epoch99 86.2%@epoch60 86.2%@epoch50 86.1%@epoch40 86.0%@epoch30 86.0%@epoch20 85.7%@epoch10
 
 	yolov5 6版本和之前的版本训练超参差异较大，导致训练收敛速度下降(在val set上)，(在test set上也稍低1% mAP)
 		使用yolov5_obb提供的dota v1.5 obb预训练权重和使用yolov5官方的COCO预训练权重
@@ -568,6 +571,32 @@ F:\ws\CyTrafficEditor2\Source\CyTrafficEditor\CyTraffic\data\videos
 					implement fuse_obb.py without help of gt results.
 					fix AP > 100%
 					more detail check
+
+
+fuse_obb3.py
+  union all obb than iou < 0.3
+python fuse_obb3.py ~/_trained_models/relabel_dataset/ottawa_a_det_fused ~/_trained_models/relabel_dataset/ottawa_a_det_073/ ~/_trained_models/relabel_dataset/ottawa_a_det_092/ ~/_trained_models/relabel_dataset/ottawa_a_det_z0009/
+python fuse_obb3.py ~/_trained_models/relabel_dataset/ottawa_b_det_fused_073 ~/_trained_models/relabel_dataset/ottawa_b_073_det/ ~/_trained_models/relabel_dataset/ottawa_b_092_det/ ~/_trained_models/relabel_dataset/ottawa_b_z0009_det/
+python fuse_obb3.py ~/_trained_models/relabel_dataset/ottawa_b_det_fused_092 ~/_trained_models/relabel_dataset/ottawa_b_092_det/ ~/_trained_models/relabel_dataset/ottawa_b_z0009_det/ ~/_trained_models/relabel_dataset/ottawa_b_073_det/
+python fuse_obb3.py ~/_trained_models/relabel_dataset/ottawa_b_det_fused_z0009 ~/_trained_models/relabel_dataset/ottawa_b_z0009_det/ ~/_trained_models/relabel_dataset/ottawa_b_073_det/ ~/_trained_models/relabel_dataset/ottawa_b_092_det/
+
+
+with /home/me/1TSSD/maliang/yolov5_obb/utils/datasets.py
+        # attrs_json_path = path[0:path.rfind(".")]+".video_attrs.json"
+        # with open(attrs_json_path) as f:
+        #     attrs = json.load(f)
+        # scale_ratio = 25.0 / attrs["MostCommonVehicleWidthInPixels"]
+        scale_ratio = 25.0 / 36.0
+        img0 = cv2.resize(img0, (int(img0.shape[1]*scale_ratio), int(img0.shape[0]*scale_ratio)))
+
+        #img00 = np.zeros((4000, 6016, 3), np.uint8)
+        img00 = np.zeros((6016, 6016, 3), np.uint8)
+        img00[0:img0.shape[0], 0:img0.shape[1]] = img0
+
+
+python detect.py --device 0 --weight "runs/yolov5m_finetune/weights/best.pt" --save-json --exist-ok --name exp131 --img-size 6000 6000 --source /home/me/_trained_models/relabel_dataset/ottawa_b
+python detect.py --device 0 --weights "runs/train/exp7/weights/epoch50.pt"   --save-json --exist-ok --name exp134 --img-size 6000 6000 --conf-thres 0.01 --iou-thres 0.5 --source ~/_trained_models/relabel_dataset//ottawa_b
+
 
 weighted box fusion ensemble (OBB)
 Stochastic Weights Averaging (SWA) in training

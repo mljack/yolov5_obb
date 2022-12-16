@@ -231,7 +231,7 @@ def run(weights=ROOT / 'yolov5s.pt',  # model.pt path(s)
                 if save_json:
                     out_json_path = save_path.replace(".png", "").replace(".jpg", "")+".vehicle_markers.json"
                     print(out_json_path)
-                    with open(out_json_path, 'a') as f:
+                    with open(out_json_path, 'w') as f:
                         f.write(pprint.pformat(vehicle_markers, width=500, indent=1).replace("'", "\"").replace("True", "true").replace("False", "false"))
 
             # Print time (inference-only)

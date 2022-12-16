@@ -220,13 +220,16 @@ class LoadImages:
             assert img0 is not None, f'Image Not Found {path}'
             s = f'image {self.count}/{self.nf} {path}: '
 
-        attrs_json_path = path[0:path.rfind(".")]+".video_attrs.json"
-        with open(attrs_json_path) as f:
-            attrs = json.load(f)
-        scale_ratio = 25.0 / attrs["MostCommonVehicleWidthInPixels"]
+        # attrs_json_path = path[0:path.rfind(".")]+".video_attrs.json"
+        # with open(attrs_json_path) as f:
+        #     attrs = json.load(f)
+        # scale_ratio = 25.0 / attrs["MostCommonVehicleWidthInPixels"]
+        scale_ratio = 25.0 / 38.0
         img0 = cv2.resize(img0, (int(img0.shape[1]*scale_ratio), int(img0.shape[0]*scale_ratio)))
 
-        img00 = np.zeros((4000, 6016, 3), np.uint8)
+        #img00 = np.zeros((4000, 6016, 3), np.uint8)
+        #img00 = np.zeros((4800, 7200, 3), np.uint8)
+        img00 = np.zeros((6016, 6016, 3), np.uint8)
         img00[0:img0.shape[0], 0:img0.shape[1]] = img0
 
         # Padded resize

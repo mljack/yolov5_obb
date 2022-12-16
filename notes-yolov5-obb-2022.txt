@@ -595,7 +595,15 @@ with /home/me/1TSSD/maliang/yolov5_obb/utils/datasets.py
 
 
 python detect.py --device 0 --weight "runs/yolov5m_finetune/weights/best.pt" --save-json --exist-ok --name exp131 --img-size 6000 6000 --source /home/me/_trained_models/relabel_dataset/ottawa_b
-python detect.py --device 0 --weights "runs/train/exp7/weights/epoch50.pt"   --save-json --exist-ok --name exp134 --img-size 6000 6000 --conf-thres 0.01 --iou-thres 0.5 --source ~/_trained_models/relabel_dataset//ottawa_b
+python detect.py --device 0 --weights "runs/train/exp7/weights/epoch50.pt"   --save-json --exist-ok --name exp134 --img-size 6000 6000 --conf-thres 0.01 --iou-thres 0.5 --source ~/_trained_models/relabel_dataset/ottawa_b
+
+python fuse_obb4.py ~/_trained_models/relabel_dataset/ottawa_b_fused4 ~/_trained_models/relabel_dataset/ottawa_b_yolov5_obb_2022_eagle_longyao_iou0.92/
+
+python detect.py --device 0 --weights "runs/train/exp7/weights/epoch50.pt" --save-json --exist-ok --name exp140 --img-size 4000 8000 --conf-thres 0.1 --iou-thres 0.9 --source ~/_trained_models/relabel_dataset/linz_rare_samples_a
+python detect.py --device 0 --weights "runs/train/exp7/weights/epoch50.pt" --save-json --exist-ok --name exp141 --img-size 4800 7200 --conf-thres 0.1 --iou-thres 0.9 --source ~/_trained_models/relabel_dataset/Christchurch_2021_5cm_dense
+python detect.py --device 0 --weights "runs/train/exp7/weights/epoch50.pt" --save-json --exist-ok --name exp142 --img-size 4800 7200 --conf-thres 0.1 --iou-thres 0.9 --source ~/_trained_models/relabel_dataset/Napier_2017_2018_5cm_dense
+python detect.py --device 0 --weights "runs/train/exp7/weights/epoch50.pt" --save-json --exist-ok --name exp143 --img-size 4800 7200 --conf-thres 0.1 --iou-thres 0.9 --source ~/_trained_models/relabel_dataset/Invercargill_2016_5cm
+python detect.py --device 0 --weights "runs/train/exp7/weights/epoch50.pt" --save-json --exist-ok --name exp144 --img-size 6016 6016 --conf-thres 0.1 --iou-thres 0.9 --source ~/_trained_models/relabel_dataset/linz_trucks
 
 
 weighted box fusion ensemble (OBB)
